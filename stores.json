@@ -1,0 +1,136 @@
+[
+  {
+    "storeKey": "yonge-street-toronto-on",
+    "name": "Yonge Street",
+    "address1": "2665 Yonge Street",
+    "city": "Toronto",
+    "province": "ON",
+    "postalCode": "M4P 2J6",
+    "country": "CA",
+    "phone": "(416) 485-1611"
+  },
+  {
+    "storeKey": "yorkdale-shopping-centre-toronto-on",
+    "name": "Yorkdale Shopping Centre",
+    "address1": "3401 Dufferin Street",
+    "city": "Toronto",
+    "province": "ON",
+    "postalCode": "M6A 2T9",
+    "country": "CA",
+    "phone": "(416) 915-2030"
+  },
+  {
+    "storeKey": "cf-sherway-gardens-etobicoke-on",
+    "name": "CF Sherway Gardens",
+    "address1": "25 The West Mall",
+    "city": "Etobicoke",
+    "province": "ON",
+    "postalCode": "M9C 1B8",
+    "country": "CA",
+    "phone": "(416) 620-7750"
+  },
+  {
+    "storeKey": "hillcrest-mall-richmond-hill-on",
+    "name": "Hillcrest Mall",
+    "address1": "9350 Yonge Street",
+    "city": "Richmond Hill",
+    "province": "ON",
+    "postalCode": "L4C 5G2",
+    "country": "CA",
+    "phone": "(905) 292-0001"
+  },
+  {
+    "storeKey": "cf-markville-markham-on",
+    "name": "CF Markville",
+    "address1": "5000 Highway 7",
+    "city": "Markham",
+    "province": "ON",
+    "postalCode": "L3R 4M9",
+    "country": "CA",
+    "phone": "(905) 258-1111"
+  },
+  {
+    "storeKey": "mapleview-burlington-on",
+    "name": "Sporting Life (Burlington)",
+    "address1": "900 Maple Avenue",
+    "address2": "102-202",
+    "city": "Burlington",
+    "province": "ON",
+    "postalCode": "L7S 2J8",
+    "country": "CA",
+    "phone": "(289) 812-1220"
+  },
+  {
+    "storeKey": "hurontario-collingwood-on",
+    "name": "Sporting Life (Collingwood)",
+    "address1": "222 Hurontario Street",
+    "city": "Collingwood",
+    "province": "ON",
+    "postalCode": "L9Y 2M2",
+    "country": "CA",
+    "phone": "(705) 532-9926"
+  },
+  {
+    "storeKey": "lansdowne-park-ottawa-on",
+    "name": "Lansdowne Park",
+    "address1": "125 March\u00e9 Way",
+    "address2": "Lansdowne Park",
+    "city": "Ottawa",
+    "province": "ON",
+    "postalCode": "K1S 3W7",
+    "country": "CA",
+    "phone": "(613) 216-6000"
+  },
+  {
+    "storeKey": "le-carrefour-laval-qc",
+    "name": "Sporting Life (Laval)",
+    "address1": "3003 Boulevard le Carrefour",
+    "city": "Laval",
+    "province": "QC",
+    "postalCode": "H7T 1C7",
+    "country": "CA",
+    "phone": "(579) 805-5520"
+  },
+  {
+    "storeKey": "quartier-dix30-brossard-qc",
+    "name": "Quartier DIX30",
+    "address1": "9090 Boulevard Leduc",
+    "address2": "#40",
+    "city": "Brossard",
+    "province": "QC",
+    "postalCode": "J4Y 0E9",
+    "country": "CA",
+    "phone": "(450) 648-7669"
+  },
+  {
+    "storeKey": "southgate-centre-edmonton-ab",
+    "name": "Southgate Centre",
+    "address1": "5015 111 St NW",
+    "address2": "Unit #940",
+    "city": "Edmonton",
+    "province": "AB",
+    "postalCode": "T6H 4M6",
+    "country": "CA",
+    "phone": "(587) 405-5660"
+  },
+  {
+    "storeKey": "shaganappi-trail-calgary-ab",
+    "name": "Sporting Life (Calgary - Shaganappi)",
+    "address1": "3625 Shaganappi Trail Northwest",
+    "city": "Calgary",
+    "province": "AB",
+    "postalCode": "T3A 0E2",
+    "country": "CA",
+    "phone": "(403) 313-1675"
+  },
+  {
+    "storeKey": "anderson-road-calgary-ab",
+    "name": "Sporting Life (Calgary - Anderson)",
+    "address1": "100 Anderson Road Southeast",
+    "city": "Calgary",
+    "province": "AB",
+    "postalCode": "T2J 3V1",
+    "country": "CA",
+    "phone": "(403) 313-4477"
+  }
+]
