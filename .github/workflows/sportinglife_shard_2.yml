@@ -32,6 +32,9 @@ jobs:
             npm install
           fi
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
       - name: Run Sporting Life scraper
         env:
           TOTAL_SHARDS: '3'
