@@ -12,8 +12,8 @@ const SHARD_INDEX = parseInt(process.env.SHARD_INDEX || '1', 10);
 const TOTAL_SHARDS = parseInt(process.env.TOTAL_SHARDS || '1', 10);
 function resolveMaxPages() {
   const envMax = process.env.MAX_PAGES || process.env.SPORTINGLIFE_MAX_PAGES;
-  const parsed = parseInt(envMax || '50', 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 50;
+  const parsed = parseInt(envMax || '150', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 150;
 }
 const SAVE_DEBUG_HTML = process.env.SAVE_DEBUG_HTML === 'true';
 
@@ -184,6 +184,7 @@ async function scrapeClearance() {
   const productMap = new Map();
   const maxPages = resolveMaxPages();
   console.log(`Paging through up to ${maxPages} pages of clearance results.`);
+  let consecutiveNoNewPages = 0;
   for (let page = 1; page <= maxPages; page++) {
     const url = `${BASE_URL}${page}`;
     console.log(`Fetching page ${page}: ${url}`);
@@ -194,19 +195,28 @@ async function scrapeClearance() {
     }
 
     const products = parseProducts(html);
-    if (!products.length) {
-      console.warn(`No products found on page ${page}.`);
-      if (page === 1 && SAVE_DEBUG_HTML) {
-        await saveDebugHtml(html);
-      }
-      break;
+    if (!products.length && page === 1 && SAVE_DEBUG_HTML) {
+      await saveDebugHtml(html);
     }
 
+    const beforeSize = productMap.size;
     for (const product of products) {
       if (!product.link) continue;
       if (!productMap.has(product.link)) {
         productMap.set(product.link, product);
       }
+    }
+
+    const newCount = productMap.size - beforeSize;
+    if (newCount === 0) {
+      consecutiveNoNewPages += 1;
+      console.log(`No new products found on page ${page}. Consecutive empty pages: ${consecutiveNoNewPages}.`);
+      if (consecutiveNoNewPages >= 2) {
+        console.log('Stopping pagination after two consecutive pages without new products.');
+        break;
+      }
+    } else {
+      consecutiveNoNewPages = 0;
     }
 
     await delay(PAGE_DELAY_MS);
