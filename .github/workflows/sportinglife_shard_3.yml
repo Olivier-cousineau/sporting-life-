@@ -1,5 +1,9 @@
 name: SportingLife Clearance Shard 3/3
 
+concurrency:
+  group: sportinglife-publish
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
 
@@ -9,6 +13,8 @@ permissions:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    env:
+      SHARD_INDEX: '3'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,7 +34,6 @@ jobs:
 
       - name: Run Sporting Life scraper
         env:
-          SHARD_INDEX: '3'
           TOTAL_SHARDS: '3'
           MAX_PAGES: '50'
           SAVE_DEBUG_HTML: 'true'
@@ -44,12 +49,47 @@ jobs:
 
       - name: Commit and push changes
         run: |
+          set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/sportinglife
+
+          echo "🔄 Fetch origin/main..."
+          git fetch origin main
+
+          echo "🧠 Reset sur origin/main pour éviter les fast-forward errors..."
+          git checkout main
+          git reset --hard origin/main
+
+          echo "➕ Stage outputs..."
+          git add public/sportinglife data/sportinglife_stores.json 2>/dev/null || true
+
           if git diff --cached --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: update sportinglife shard 3 data"
-            git push
+            echo "✅ Rien à committer."
+            exit 0
           fi
+
+          git commit -m "chore: update sportinglife shard ${SHARD_INDEX} data"
+
+          echo "🚀 Push avec retry..."
+          for attempt in 1 2 3; do
+            if git push origin main; then
+              echo "✅ Push OK"
+              exit 0
+            fi
+
+            echo "⚠️ Push rejeté (tentative ${attempt}). Re-sync et retry..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            git add public/sportinglife data/sportinglife_stores.json 2>/dev/null || true
+            if git diff --cached --quiet; then
+              echo "✅ Après resync, rien à pousser."
+              exit 0
+            fi
+
+            git commit -m "chore: update sportinglife shard ${SHARD_INDEX} data"
+          done
+
+          echo "❌ Push impossible après 3 tentatives."
+          exit 1
