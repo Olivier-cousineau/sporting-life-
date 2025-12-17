@@ -1,7 +1,7 @@
 name: SportingLife Clearance Shard 3/3
 
 concurrency:
-  group: sportinglife-publish
+  group: econoplus-sportinglife-publish
   cancel-in-progress: false
 
 on:
@@ -50,49 +50,56 @@ jobs:
           path: outputs/debug/sportinglife_page1.html
           if-no-files-found: ignore
 
-      - name: Commit and push changes
+      - name: Checkout econoplus
+        uses: actions/checkout@v4
+        with:
+          repository: Olivier-cousineau/econoplus
+          token: ${{ secrets.ECONOPLUS_PUSH_TOKEN }}
+          path: _econoplus
+          ref: main
+
+      - name: Copy Sporting Life data into econoplus
+        run: |
+          mkdir -p _econoplus/public/sportinglife
+          rsync -av --delete public/sportinglife/ _econoplus/public/sportinglife/
+          cp -f data/sportinglife_stores.json _econoplus/public/sportinglife/stores.json
+
+      - name: Commit & push to econoplus (push-safe)
+        env:
+          SHARD_INDEX: ${{ env.SHARD_INDEX }}
         run: |
           set -euo pipefail
-
+          cd _econoplus
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          echo "🔄 Fetch origin/main..."
           git fetch origin main
-
-          echo "🧠 Reset sur origin/main pour éviter les fast-forward errors..."
           git checkout main
           git reset --hard origin/main
 
-          echo "➕ Stage outputs..."
-          git add public/sportinglife data/sportinglife_stores.json 2>/dev/null || true
-
+          git add public/sportinglife || true
           if git diff --cached --quiet; then
-            echo "✅ Rien à committer."
+            echo "No changes to push to econoplus."
             exit 0
           fi
 
           git commit -m "chore: update sportinglife shard ${SHARD_INDEX} data"
 
-          echo "🚀 Push avec retry..."
           for attempt in 1 2 3; do
             if git push origin main; then
-              echo "✅ Push OK"
+              echo "Push OK"
               exit 0
             fi
-
-            echo "⚠️ Push rejeté (tentative ${attempt}). Re-sync et retry..."
+            echo "Push rejected (attempt ${attempt}). Re-sync and retry..."
             git fetch origin main
             git reset --hard origin/main
-
-            git add public/sportinglife data/sportinglife_stores.json 2>/dev/null || true
+            git add public/sportinglife || true
             if git diff --cached --quiet; then
-              echo "✅ Après resync, rien à pousser."
+              echo "After resync, nothing to push."
               exit 0
             fi
-
             git commit -m "chore: update sportinglife shard ${SHARD_INDEX} data"
           done
 
-          echo "❌ Push impossible après 3 tentatives."
+          echo "Push failed after 3 attempts."
           exit 1
