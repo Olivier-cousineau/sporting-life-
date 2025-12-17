@@ -1,0 +1,13 @@
+{
+  "name": "sporting-life",
+  "version": "1.0.0",
+  "description": "Sporting Life clearance scraper",
+  "main": "scraper_sportinglife.js",
+  "scripts": {
+    "sportinglife": "node scraper_sportinglife.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12"
+  }
+}
