@@ -1,0 +1,92 @@
+name: SportingLife Orchestrator
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine next shard
+        id: compute
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+
+          const statePath = path.join('public', 'sportinglife', '_orchestrator_state.json');
+          fs.mkdirSync(path.dirname(statePath), { recursive: true });
+          let lastShard = 0;
+          try {
+            const raw = fs.readFileSync(statePath, 'utf8');
+            const parsed = JSON.parse(raw);
+            lastShard = Number(parsed.lastShard) || 0;
+          } catch (err) {
+            console.log('No previous state, starting from shard 1');
+          }
+
+          const totalShards = 3;
+          const nextShard = (lastShard % totalShards) + 1;
+          console.log(`Next shard: ${nextShard}`);
+
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `next_shard=${nextShard}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `state_path=${statePath}\n`);
+          NODE
+
+      - name: Dispatch shard workflow
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const nextShard = parseInt('${{ steps.compute.outputs.next_shard }}', 10);
+            const workflowFile = `sportinglife_shard_${nextShard}.yml`;
+            core.info(`Dispatching shard workflow: ${workflowFile}`);
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: workflowFile,
+              ref: context.ref,
+              inputs: {}
+            });
+
+      - name: Update orchestrator state
+        env:
+          NEXT_SHARD: ${{ steps.compute.outputs.next_shard }}
+          STATE_PATH: ${{ steps.compute.outputs.state_path }}
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+
+          const statePath = process.env.STATE_PATH || path.join('public', 'sportinglife', '_orchestrator_state.json');
+          fs.mkdirSync(path.dirname(statePath), { recursive: true });
+          const data = {
+            lastShard: Number(process.env.NEXT_SHARD) || 1,
+            updatedAt: new Date().toISOString()
+          };
+          fs.writeFileSync(statePath, JSON.stringify(data, null, 2));
+          console.log(`Wrote orchestrator state to ${statePath}`);
+          NODE
+
+      - name: Commit and push state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/sportinglife/_orchestrator_state.json
+          if git diff --cached --quiet; then
+            echo "No state changes to commit"
+          else
+            git commit -m "chore: update sportinglife orchestrator state"
+            git push
+          fi
