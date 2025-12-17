@@ -10,7 +10,11 @@ const MAX_RETRIES = 2;
 
 const SHARD_INDEX = parseInt(process.env.SHARD_INDEX || '1', 10);
 const TOTAL_SHARDS = parseInt(process.env.TOTAL_SHARDS || '1', 10);
-const MAX_PAGES = parseInt(process.env.MAX_PAGES || '50', 10);
+function resolveMaxPages() {
+  const envMax = process.env.MAX_PAGES || process.env.SPORTINGLIFE_MAX_PAGES;
+  const parsed = parseInt(envMax || '50', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 50;
+}
 const SAVE_DEBUG_HTML = process.env.SAVE_DEBUG_HTML === 'true';
 
 function delay(ms) {
@@ -53,7 +57,10 @@ function extractProductsFromNodes($, nodes) {
 
     const price = parsePrice(priceText);
     const originalPrice = parsePrice(originalPriceText);
-    const discount = price && originalPrice && originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : null;
+    const discount =
+      price !== null && originalPrice !== null && originalPrice > price
+        ? Math.round(((originalPrice - price) / originalPrice) * 100)
+        : null;
 
     const image =
       $node.find('img').first().attr('data-src') ||
@@ -175,7 +182,9 @@ async function scrapeClearance() {
   console.log(`Total stores: ${stores.length}. Shard ${SHARD_INDEX}/${TOTAL_SHARDS} handles ${shardStores.length} stores.`);
 
   const productMap = new Map();
-  for (let page = 1; page <= MAX_PAGES; page++) {
+  const maxPages = resolveMaxPages();
+  console.log(`Paging through up to ${maxPages} pages of clearance results.`);
+  for (let page = 1; page <= maxPages; page++) {
     const url = `${BASE_URL}${page}`;
     console.log(`Fetching page ${page}: ${url}`);
     const html = await fetchWithRetry(url);
