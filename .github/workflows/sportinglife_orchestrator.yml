@@ -3,7 +3,7 @@ name: SportingLife Orchestrator
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 4 * * 1'
 
 permissions:
   contents: write
@@ -25,44 +25,37 @@ jobs:
           const fs = require('fs');
           const path = require('path');
 
-          const statePath = path.join('public', 'sportinglife', '_orchestrator_state.json');
-          fs.mkdirSync(path.dirname(statePath), { recursive: true });
-          let lastShard = 0;
-          try {
-            const raw = fs.readFileSync(statePath, 'utf8');
-            const parsed = JSON.parse(raw);
-            lastShard = Number(parsed.lastShard) || 0;
-          } catch (err) {
-            console.log('No previous state, starting from shard 1');
-          }
-
           const totalShards = 3;
-          const nextShard = (lastShard % totalShards) + 1;
-          console.log(`Next shard: ${nextShard}`);
+          const shards = Array.from({ length: totalShards }, (_, index) => index + 1);
+          const statePath = path.join('public', 'sportinglife', '_orchestrator_state.json');
 
-          fs.appendFileSync(process.env.GITHUB_OUTPUT, `next_shard=${nextShard}\n`);
+          console.log(`Dispatching shards: ${shards.join(', ')}`);
+
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `shards=${JSON.stringify(shards)}\n`);
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `state_path=${statePath}\n`);
           NODE
 
-      - name: Dispatch shard workflow
+      - name: Dispatch shard workflows
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const nextShard = parseInt('${{ steps.compute.outputs.next_shard }}', 10);
-            const workflowFile = `sportinglife_shard_${nextShard}.yml`;
-            core.info(`Dispatching shard workflow: ${workflowFile}`);
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: workflowFile,
-              ref: context.ref,
-              inputs: {}
-            });
+            const shards = JSON.parse('${{ steps.compute.outputs.shards }}');
+            for (const shard of shards) {
+              const workflowFile = `sportinglife_shard_${shard}.yml`;
+              core.info(`Dispatching shard workflow: ${workflowFile}`);
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: workflowFile,
+                ref: context.ref,
+                inputs: {}
+              });
+            }
 
       - name: Update orchestrator state
         env:
-          NEXT_SHARD: ${{ steps.compute.outputs.next_shard }}
+          SHARDS: ${{ steps.compute.outputs.shards }}
           STATE_PATH: ${{ steps.compute.outputs.state_path }}
         run: |
           node - <<'NODE'
@@ -71,8 +64,9 @@ jobs:
 
           const statePath = process.env.STATE_PATH || path.join('public', 'sportinglife', '_orchestrator_state.json');
           fs.mkdirSync(path.dirname(statePath), { recursive: true });
+          const shards = JSON.parse(process.env.SHARDS || '[]');
           const data = {
-            lastShard: Number(process.env.NEXT_SHARD) || 1,
+            lastShard: shards.length ? shards[shards.length - 1] : 1,
             updatedAt: new Date().toISOString()
           };
           fs.writeFileSync(statePath, JSON.stringify(data, null, 2));
