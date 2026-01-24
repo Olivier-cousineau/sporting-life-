@@ -54,7 +54,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Olivier-cousineau/econoplus
-          token: ${{ secrets.ECONOPLUS_PUSH_TOKEN }}
+          token: ${{ secrets.ECONOPLUS }}
           path: _econoplus
           ref: main
 
