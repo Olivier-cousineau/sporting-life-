@@ -43,11 +43,13 @@ jobs:
         run: |
           node scraper_sportinglife.js
 
-      - name: Upload debug HTML (if present)
+      - name: Upload debug artifacts (if present)
         uses: actions/upload-artifact@v4
         with:
-          name: sportinglife-debug-shard-2
-          path: outputs/debug/sportinglife_page1.html
+          name: sportinglife-debug-shard-${{ env.SHARD_INDEX }}
+          path: |
+            outputs/debug/sportinglife_page.html
+            outputs/debug/sportinglife.png
           if-no-files-found: ignore
 
       - name: Checkout econoplus
@@ -73,11 +75,22 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+          # Repartir propre AVANT la copie
           git fetch origin main
           git checkout main
           git reset --hard origin/main
 
-          git add public/sportinglife || true
+          # Copie APRÈS reset (important)
+          mkdir -p public/sportinglife
+          rsync -av --delete ../public/sportinglife/ public/sportinglife/
+          cp -f ../data/sportinglife_stores.json public/sportinglife/stores.json
+
+          echo "---- git status after copy ----"
+          git status --porcelain
+
+          # -A pour inclure les deletions
+          git add -A public/sportinglife || true
+
           if git diff --cached --quiet; then
             echo "No changes to push to econoplus."
             exit 0
@@ -93,7 +106,12 @@ jobs:
             echo "Push rejected (attempt ${attempt}). Re-sync and retry..."
             git fetch origin main
             git reset --hard origin/main
-            git add public/sportinglife || true
+
+            # Re-copie après resync
+            rsync -av --delete ../public/sportinglife/ public/sportinglife/
+            cp -f ../data/sportinglife_stores.json public/sportinglife/stores.json
+
+            git add -A public/sportinglife || true
             if git diff --cached --quiet; then
               echo "After resync, nothing to push."
               exit 0
