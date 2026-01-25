@@ -266,26 +266,36 @@ async function saveOutputs(products, shardStores) {
   const updatedAt = new Date().toISOString();
   await fs.mkdir(path.join(__dirname, 'public', 'sportinglife'), { recursive: true });
 
+  const cleanedProducts = products.filter((product) => {
+    const name = product?.name || '';
+    const link = product?.link || '';
+    return !/liquidation/i.test(name) && !/liquidation/i.test(link);
+  });
+  const removedCount = products.length - cleanedProducts.length;
+  if (removedCount > 0) {
+    console.log(`Removed ${removedCount} liquidation products before saving outputs.`);
+  }
+
   for (const store of shardStores) {
     const output = {
       store,
       updatedAt,
       source: SOURCE,
-      products
+      products: cleanedProducts
     };
     const filePath = path.join(__dirname, 'public', 'sportinglife', `${store.storeKey}.json`);
     await fs.writeFile(filePath, JSON.stringify(output, null, 2));
-    console.log(`Wrote ${products.length} products for store ${store.storeKey} to ${filePath}`);
+    console.log(`Wrote ${cleanedProducts.length} products for store ${store.storeKey} to ${filePath}`);
   }
 
   const indexPath = path.join(__dirname, 'public', 'sportinglife', 'products-index.json');
   const indexData = {
     updatedAt,
     source: SOURCE,
-    products
+    products: cleanedProducts
   };
   await fs.writeFile(indexPath, JSON.stringify(indexData, null, 2));
-  console.log(`Wrote product index with ${products.length} products to ${indexPath}`);
+  console.log(`Wrote product index with ${cleanedProducts.length} products to ${indexPath}`);
 }
 
 async function scrapeClearance() {
