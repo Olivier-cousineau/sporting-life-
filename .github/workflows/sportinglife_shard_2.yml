@@ -60,37 +60,31 @@ jobs:
           path: _econoplus
           ref: main
 
-      - name: Copy Sporting Life data into econoplus
-        run: |
-          mkdir -p _econoplus/public/sportinglife
-          rsync -av --delete public/sportinglife/ _econoplus/public/sportinglife/
-          cp -f data/sportinglife_stores.json _econoplus/public/sportinglife/stores.json
-
-      - name: Commit & push to econoplus (push-safe)
+      - name: Copy + commit + push to econoplus (push-safe)
         env:
           SHARD_INDEX: ${{ env.SHARD_INDEX }}
         run: |
           set -euo pipefail
+          # 1) Sync econoplus propre avant copie
           cd _econoplus
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Repartir propre AVANT la copie
           git fetch origin main
           git checkout main
           git reset --hard origin/main
+          cd ..
 
-          # Copie APRÈS reset (important)
-          mkdir -p public/sportinglife
-          rsync -av --delete ../public/sportinglife/ public/sportinglife/
-          cp -f ../data/sportinglife_stores.json public/sportinglife/stores.json
+          # 2) Copier APRÈS le reset
+          mkdir -p _econoplus/public/sportinglife
+          rsync -av --delete public/sportinglife/ _econoplus/public/sportinglife/
+          cp -f data/sportinglife_stores.json _econoplus/public/sportinglife/stores.json
 
+          # 3) Commit + push (inclut deletions)
+          cd _econoplus
           echo "---- git status after copy ----"
           git status --porcelain
 
-          # -A pour inclure les deletions
           git add -A public/sportinglife || true
-
           if git diff --cached --quiet; then
             echo "No changes to push to econoplus."
             exit 0
@@ -104,13 +98,15 @@ jobs:
               exit 0
             fi
             echo "Push rejected (attempt ${attempt}). Re-sync and retry..."
+
             git fetch origin main
             git reset --hard origin/main
+            cd ..
 
-            # Re-copie après resync
-            rsync -av --delete ../public/sportinglife/ public/sportinglife/
-            cp -f ../data/sportinglife_stores.json public/sportinglife/stores.json
+            rsync -av --delete public/sportinglife/ _econoplus/public/sportinglife/
+            cp -f data/sportinglife_stores.json _econoplus/public/sportinglife/stores.json
 
+            cd _econoplus
             git add -A public/sportinglife || true
             if git diff --cached --quiet; then
               echo "After resync, nothing to push."
