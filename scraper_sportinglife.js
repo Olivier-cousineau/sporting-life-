@@ -46,7 +46,7 @@ async function loadStores() {
   return JSON.parse(raw);
 }
 
-async function saveDebugArtifacts(page) {
+async function saveDebugArtifacts(page, navigationInfo = {}) {
   try {
     const html = await page.content();
     const debugHtmlPath = path.join(__dirname, 'outputs', 'debug', 'sportinglife_page.html');
@@ -63,6 +63,10 @@ async function saveDebugArtifacts(page) {
     console.log(`Saved debug screenshot to ${screenshotPath}`);
   } catch (error) {
     console.warn('Failed to save debug screenshot', error);
+  }
+
+  if (navigationInfo.url || typeof navigationInfo.status !== 'undefined') {
+    console.log(`Navigation debug info: url=${navigationInfo.url || 'unknown'} status=${navigationInfo.status ?? 'unknown'}`);
   }
 }
 
@@ -245,6 +249,19 @@ async function loadAllProducts(page) {
   return Array.from(productMap.values()).slice(0, MAX_ITEMS);
 }
 
+async function gotoWithRetry(page, url) {
+  let response = null;
+  try {
+    response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
+    return { response, attempt: 1 };
+  } catch (error) {
+    console.warn('Initial navigation failed, retrying with full load.', error.message);
+  }
+
+  response = await page.goto(url, { waitUntil: 'load', timeout: 90000 });
+  return { response, attempt: 2 };
+}
+
 async function saveOutputs(products, shardStores) {
   const updatedAt = new Date().toISOString();
   await fs.mkdir(path.join(__dirname, 'public', 'sportinglife'), { recursive: true });
@@ -282,15 +299,31 @@ async function scrapeClearance() {
 
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+  page.setDefaultNavigationTimeout(90000);
+  await page.route('**/*', (route) => {
+    const type = route.request().resourceType();
+    if (type === 'image' || type === 'font') {
+      return route.abort();
+    }
+    return route.continue();
+  });
 
+  let navigationInfo = {};
   try {
-    await page.goto(CLEARANCE_URL, { waitUntil: 'networkidle' });
+    const { response, attempt } = await gotoWithRetry(page, CLEARANCE_URL);
+    navigationInfo = {
+      url: page.url(),
+      status: response ? response.status() : undefined,
+      attempt
+    };
+    console.log(`Navigation completed (attempt ${attempt}) url=${navigationInfo.url} status=${navigationInfo.status ?? 'unknown'}`);
+    await page.waitForSelector(PRODUCT_TILE_SELECTOR, { timeout: 60000 });
     await acceptCookiesIfPresent(page);
     const products = await loadAllProducts(page);
     await saveOutputs(products, shardStores);
   } catch (error) {
     console.error('Scraper encountered an error:', error);
-    await saveDebugArtifacts(page);
+    await saveDebugArtifacts(page, navigationInfo);
     throw error;
   } finally {
     await browser.close();
