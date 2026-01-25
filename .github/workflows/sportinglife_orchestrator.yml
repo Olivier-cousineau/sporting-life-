@@ -13,6 +13,8 @@ jobs:
   orchestrate:
     runs-on: ubuntu-latest
     steps:
+      - name: Log orchestrator trigger context
+        run: echo "event=${{ github.event_name }} schedule=${{ github.event.schedule }} actor=${{ github.actor }} run=${{ github.run_id }} ref=${{ github.ref }}"
       - name: Checkout
         uses: actions/checkout@v4
         with:
