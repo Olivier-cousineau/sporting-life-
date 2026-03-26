@@ -117,3 +117,16 @@ jobs:
 
           echo "Push failed after 3 attempts."
           exit 1
+
+      - name: Upsert to Supabase
+        if: env.SUPABASE_URL != ''
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_SERVICE_KEY" ]; then
+            npm install --omit=dev
+            node scripts/upsert_to_supabase.mjs sportinglife "public/sportinglife/*.json" --exclude=stores.json
+          else
+            echo "Supabase credentials not configured, skipping"
+          fi
